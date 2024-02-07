@@ -10,7 +10,7 @@ import log4js from 'log4js';
 const logger = log4js.getLogger();
 const consoleLogger = log4js.getLogger("console");
 
-import { filterCreateBody, IamUtil } from './iam-util.js';
+import { filterCreateBody, IamUtil } from './util/iam-util.js';
 
 const DEFAULT_FACTOR_SETTINGS = "AuthenticationFactorSettings"
 

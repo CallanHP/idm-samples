@@ -18,7 +18,7 @@ import log4js from 'log4js';
 const logger = log4js.getLogger();
 const consoleLogger = log4js.getLogger("console");
 
-import { filterCreateBody, IamUtil } from './iam-util.js';
+import { filterCreateBody, IamUtil } from './util/iam-util.js';
 
 //Magic number definitons (though I am not sure who I am kidding,
 //there are magic attributes based on the IAM Schema all through this)
@@ -815,6 +815,10 @@ async function createResources(iam, instance, resources, dryRun) {
     return "new-app-id";
   } else {
     logger.debug("Preparing to send Bulk request to " + instance + "...");
+    if(!bulkRequest.Operations || bulkRequest.Operations.length == 0){
+      logger.error("No Operations to perform as part of the Application Creation.");
+      return null;
+    }
     logger.trace(JSON.stringify(options, null, 2));
     let bulkResult = await iam.callBulkEndpoint(instance, options);
     //Extract the ids from the response in order to populate the PATCH request
@@ -827,40 +831,42 @@ async function createResources(iam, instance, resources, dryRun) {
         }
       }
     }
-    if (patchBulkRequest.Operations && patchBulkRequest.Operations.length > 0) {
-      for (let operation of patchBulkRequest.Operations) {
-        if(!operation.path.startsWith("/MappedAttributes")){
-          //Replace the path
-          let bulkId = operation.path.match(/bulkId:[^\/]*/g);
-          if (bulkId) {
-            operation.path = operation.path.replace(bulkId[0], idMapping[bulkId[0].slice(7)]);
-          }
-          //Replace the allowed scopes
-          for (let scopeOp of operation.data.Operations[0].value) {
-            if (scopeOp.idOfDefiningApp?.startsWith("bulkId:")) {
-              scopeOp.idOfDefiningApp = idMapping[scopeOp.idOfDefiningApp];
-            }
+    if (!patchBulkRequest.Operations || patchBulkRequest.Operations.length == 0) {
+      logger.debug("No additional operations required to link the app components together.");
+      return idMapping["bulkId:appId0"];
+    }
+    for (let operation of patchBulkRequest.Operations) {
+      if(!operation.path.startsWith("/MappedAttributes")){
+        //Replace the path
+        let bulkId = operation.path.match(/bulkId:[^\/]*/g);
+        if (bulkId) {
+          operation.path = operation.path.replace(bulkId[0], idMapping[bulkId[0].slice(7)]);
+        }
+        //Replace the allowed scopes
+        for (let scopeOp of operation.data.Operations[0].value) {
+          if (scopeOp.idOfDefiningApp?.startsWith("bulkId:")) {
+            scopeOp.idOfDefiningApp = idMapping[scopeOp.idOfDefiningApp];
           }
         }
+      }else{
+        //Handle Outbound Assertion Attributes, which are really annoying for some reason...
+        //Get the new appId
+        let appId = idMapping[operation.path.slice(25)]
+        //Get the newly created app to obtain the new Mapping Attribute reference
+        let options = {
+          url: '/admin/v1/Apps/' +appId +"?attributes=" +SAMLSCHEMA +":outboundAssertionAttributes.value",
+          method: "GET"
+        }
+        logger.debug("Getting newly created app from " +instance +" in order to configure attribute mappings...")
+        let appInfo = await iam.callIamEndpoint(instance, options);
+        operation.path = "/MappedAttributes/" +appInfo[SAMLSCHEMA].outboundAssertionAttributes.value;
       }
-      //Handle Outbound Assertion Attributes, which are really annoying for some reason...
-      for (let operation of patchBulkRequest.Operations) {
-        logger.debug(operation.path);
-        if(operation.path.startsWith("/MappedAttributes")){
-          //Get the new appId
-          let appId = idMapping[operation.path.slice(25)]
-          //Get the newly created app to obtain the new Mapping Attribute reference
-          let options = {
-            url: '/admin/v1/Apps/' +appId +"?attributes=" +SAMLSCHEMA +":outboundAssertionAttributes.value",
-            method: "GET"
-          }
-          logger.debug("Getting newly created app from " +instance +" in order to configure attribute mappings...")
-          let appInfo = await iam.callIamEndpoint(instance, options);
-          operation.path = "/MappedAttributes/" +appInfo[SAMLSCHEMA].outboundAssertionAttributes.value;
-        }
+    }    
+    for (let operation of patchBulkRequest.Operations) {
+      if(operation.path.startsWith("/MappedAttributes")){
+        
       }
     }
-    
     //Now send the patch request
     let patchBulkoptions = {
       url: '/admin/v1/Bulk',

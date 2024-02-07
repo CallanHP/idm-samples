@@ -2,12 +2,29 @@
 
 This repository contains a collection of utilities to support scenarios in which resources from one IAM Domain need to be migrated to another, such as to accomodate T2P (Test to Production) requirements.
 
-## High Level Functionality
+These utilities are designed to facilitate migrate of user schema extensions, comprehensive user export, migration of OAuth and SAML applications and migration of Sign-On policies.
 
-* Migrate User Schema Extensions
-* Support Comprehensive User export
-* Migration of OAuth and SAML Applications
-* Migration of Sign-On Policies
+
+* [Out of Scope Components](#out-of-scope-components)
+* [Prerequisities](#prerequisites)
+* [Configuration](#configuration)
+* [Typical Usage Scenarios](#typical-usage-scenarios)
+  * [User Migration](#typical-usage-for-user-migration)
+  * [App Migration](#typical-usage-for-app-migration)
+  * [Sign-On Configuration Migration](#typical-usage-for-sign-on-configuration-migration)
+* [Command Details](#command-details)
+  * [Common Options](#common-options)
+  * [export-users](#export-users)
+  * [migrate-attributes](#migrate-attributes)
+  * [migrate-app](#migrate-app)
+  * [migrate-sign-on](#migrate-sign-on)
+  * [reset-default-policy](#reset-default-policy)
+  * [migrate-mfa](#migrate-mfa)
+* [Using a Proxy Server](#using-a-proxy-server)
+* [Known Issues](#known-issues)
+  * [Limits on Bulk Import](#limits-on-bulk-import)
+  * [API Rate Limits](#api-rate-limits)
+
 
 ## Out of Scope Components
 
@@ -29,6 +46,8 @@ These utilites are written in Node.js, and the prerequisites can be installed us
 
 `npm install`
 
+## Configuration
+
 The utilities all reference the file specified by the `--config` option for details about the source and target instances. It was assumed that there would be consistent source and target instances during a migration scenario, and using a config file like this was simpler than specifying all of these details as parameters.
 
 The config file has the following format, specifying the source and target instances, as well as providing client credentials to use to access them.
@@ -36,11 +55,13 @@ The config file has the following format, specifying the source and target insta
 ```
 {
   "source":{
+    "auth_type": "client_credentials",
     "client_id": "1234567",
     "client_secret": "source-secret",
     "base_url":"https://idcs-<source-guid>.identity.oraclecloud.com"
   },
   "target":{
+    "auth_type": "client_credentials",
     "client_id": "12334567",
     "client_secret": "target-secret",
     "base_url":"https://idcs-<target-guid>.identity.oraclecloud.com"
@@ -49,6 +70,28 @@ The config file has the following format, specifying the source and target insta
 ```
 
 The client used is assumed to be granted Identity Domain Administrator privileges, which should be removed from both instances after migration.
+
+In addition, OCI Signing Keys can be used by specifying an `auth_type` of `config_file`. In this case, rather than specifying the `client_id` and `client_secret`, you specify a path to your [OCI Config file](https://docs.oracle.com/en-us/iaas/Content/API/Concepts/sdkconfig.htm#SDK_and_CLI_Configuration_File) in the `config_file` attribute, and a profile name in `profile`. If either of these are omitted, default values of `~/.oci/config` and `default` are used.
+
+An example config file using OCI Signing Keys:
+
+```
+{
+  "source":{
+    "auth_type": "config_file",
+    "profile":"domain_one_profile",
+    "base_url":"https://idcs-<source-guid>.identity.oraclecloud.com"
+  },
+  "target":{
+    "auth_type": "config_file",
+    "config_file": "/path/to/config/file",
+    "profile":"default",
+    "base_url":"https://idcs-<target-guid>.identity.oraclecloud.com"
+  }
+}
+```
+
+Similar to when using client credentials, it is assumed that the user associated with the OCI profile has Identity Domain Administration access in both the source and target environments.
 
 ## Typical Usage Scenarios
 

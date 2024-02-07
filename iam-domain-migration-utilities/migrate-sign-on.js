@@ -9,7 +9,7 @@ import log4js from 'log4js';
 const logger = log4js.getLogger();
 const consoleLogger = log4js.getLogger("console");
 
-import { IamUtil, filterCreateBody} from './iam-util.js';
+import { IamUtil, filterCreateBody} from './util/iam-util.js';
 
 //The default values which are used for SignOn
 const DEFAULT_SIGNON_POLICY = "Default Sign-On Policy";

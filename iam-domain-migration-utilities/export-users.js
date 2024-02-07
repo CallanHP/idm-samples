@@ -3,7 +3,7 @@
  * migrating the attributes into the target if required.
  */
 
-import { IamUtil } from './iam-util.js';
+import { IamUtil } from './util/iam-util.js';
 import { addExportHeaders, pushCustomAttributes } from './migrate-attributes.js';
 import { getExportableAttributes } from './get-exportable-attributes.js';
 

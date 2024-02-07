@@ -5,7 +5,7 @@
   "main": "migrate-iam.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha ./test"
   },
   "keywords": [],
   "author": "",
@@ -15,5 +15,10 @@
     "log4js": "^6.5.2",
     "node-fetch": "^3.2.6",
     "yargs": "^17.5.1"
+  },
+  "devDependencies": {
+    "chai": "^5.0.3",
+    "mocha": "^10.2.0",
+    "sinon": "^17.0.1"
   }
 }

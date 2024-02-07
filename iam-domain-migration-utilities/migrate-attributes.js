@@ -5,7 +5,7 @@
  * that conflict yourself.
  */
 
-import { IamUtil } from './iam-util.js';
+import { IamUtil } from './util/iam-util.js';
 import log4js from 'log4js';
 const logger = log4js.getLogger();
 const consoleLogger = log4js.getLogger("console");
